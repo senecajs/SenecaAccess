@@ -44,7 +44,8 @@ key or an actor, and all it does with a value is compare it for equality.
 | Extra message properties are ignored | `Pattern.Matches.of_extends`, `Pattern.matches_congr`, `Policy.Allows.of_extends` |
 | The empty pattern matches everything | `Pattern.matches_nil`, `Permission.permits_of_nil_mem`               |
 
-Every theorem is proved in full. There is no `sorry`.
+Every theorem is proved in full. There is no `sorry`. The worked examples
+are proofs as well.
 
 ## Scope
 
@@ -63,8 +64,10 @@ Every theorem is proved in full. There is no `sorry`.
 - A `Prop` is a statement that is either true or false. `Matches`,
   `Permits` and `Allows` are statements of this kind.
 - An `instance : Decidable …` is the procedure that computes whether such a
-  statement is true. It is what makes the rule executable, and it is what
-  the `#guard` lines in `SenecaAccess/Examples.lean` run.
+  statement is true. It is what makes the rule executable.
+- An `example` is a proved fact that is not given a name. Each one in
+  `SenecaAccess/Examples.lean` is proved `by decide`, which runs the
+  decision procedure and accepts the answer only if it is the one stated.
 
 ## Checking the spec
 
@@ -75,5 +78,5 @@ cd spec
 lake build --wfail
 ```
 
-The build checks every proof and evaluates every example. `--wfail` turns
+The build checks every proof, the worked examples included. `--wfail` turns
 warnings into failures, so a proof left as `sorry` fails the build.
