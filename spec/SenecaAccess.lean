@@ -15,7 +15,7 @@ message when it matches at least one pattern in the permission they hold.
 
 The modules, in reading order:
 
-* `SenecaAccess.Message`: a message, as the rule sees it.
+* `SenecaAccess.Message`: a message, as a map from string keys to values.
 * `SenecaAccess.Pattern`: a pattern, and what it is for a message to match one.
 * `SenecaAccess.Permission`: a set of patterns, and what it permits.
 * `SenecaAccess.Policy`: the permission each actor holds, and the access rule.

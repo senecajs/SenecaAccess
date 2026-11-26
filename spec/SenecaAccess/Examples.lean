@@ -3,8 +3,8 @@ import SenecaAccess.Policy
 /-!
 # Worked examples
 
-The rule applied to concrete messages, with keys, values and actor names
-all strings.
+The rule applied to concrete messages, with values and actor names both
+strings.
 
 Each example is a proof by `decide`. Lean runs the rule's decision
 procedure in its kernel and accepts the example only if the answer comes
@@ -14,8 +14,34 @@ out as stated, so the build fails if any example is false.
 namespace SenecaAccess.Examples
 
 /-- A message, written as its properties. -/
-def msg (properties : List (String × String)) : Message String String :=
+def msg (properties : List (String × String)) : Message String :=
   Message.ofList properties
+
+/-- A pattern, written as the properties it asks for. -/
+def pat (properties : List (String × String)) : Pattern String :=
+  Message.ofList properties
+
+/-!
+## Messages are maps
+-/
+
+-- A key has one value. Written twice, the last one counts, as in JavaScript.
+example : (msg [("cmd", "load"), ("cmd", "save")])["cmd"]? = some "save" := by decide
+
+-- A key that is not there has no value.
+example : (msg [("cmd", "load")])["name"]? = none := by decide
+
+-- The order in which properties are written makes no difference: this is one message.
+example : msg [("sys", "entity"), ("cmd", "load")] = msg [("cmd", "load"), ("sys", "entity")] := by
+  decide
+
+-- Keys are kept in alphabetical order, the order patrun checks them in.
+example : (msg [("sys", "entity"), ("name", "note"), ("cmd", "load")]).keys
+    = ["cmd", "name", "sys"] := by decide
+
+/-!
+## The access rule
+-/
 
 /--
 A small policy.
@@ -24,12 +50,12 @@ A small policy.
 * `root` holds the empty pattern, and so may call anything.
 * Nobody else holds any pattern.
 -/
-def policy : Policy String String String where
+def policy : Policy String String where
   permission
     | "alice" =>
-      [ [("sys", "entity"), ("cmd", "load")],
-        [("sys", "entity"), ("cmd", "save"), ("name", "note")] ]
-    | "root" => [ [] ]
+      [ pat [("sys", "entity"), ("cmd", "load")],
+        pat [("sys", "entity"), ("cmd", "save"), ("name", "note")] ]
+    | "root" => [ pat [] ]
     | _ => []
 
 -- A message with exactly the properties of a pattern alice holds is allowed.
