@@ -15,20 +15,19 @@ A policy records the permission held by each actor.
 `Actor` is left open. The rule never looks inside an actor; it only looks
 up the permission the policy gives it.
 -/
-structure Policy (Actor Key Value : Type) where
+structure Policy (Actor Value : Type) where
   /-- The permission held by `actor`. -/
-  permission : Actor → Permission Key Value
+  permission : Actor → Permission Value
 
 namespace Policy
 
-variable {Actor Key Value : Type}
+variable {Actor Value : Type}
 
 /--
 **The access rule.** An actor may call a message exactly when the
 permission that actor holds permits the message.
 -/
-def Allows (policy : Policy Actor Key Value) (actor : Actor) (message : Message Key Value) :
-    Prop :=
+def Allows (policy : Policy Actor Value) (actor : Actor) (message : Message Value) : Prop :=
   (policy.permission actor).Permits message
 
 /--
@@ -36,12 +35,12 @@ def Allows (policy : Policy Actor Key Value) (actor : Actor) (message : Message 
 allowed can be computed. The answer is yes or no, and there is no third
 outcome.
 -/
-instance [DecidableEq Value] (policy : Policy Actor Key Value) (actor : Actor)
-    (message : Message Key Value) : Decidable (policy.Allows actor message) :=
+instance [DecidableEq Value] (policy : Policy Actor Value) (actor : Actor)
+    (message : Message Value) : Decidable (policy.Allows actor message) :=
   inferInstanceAs (Decidable ((policy.permission actor).Permits message))
 
-variable {policy other : Policy Actor Key Value} {actor : Actor}
-variable {message wider : Message Key Value}
+variable {policy other : Policy Actor Value} {actor : Actor}
+variable {message wider : Message Value}
 
 /--
 The access rule in full, with every definition unfolded: the call is
@@ -51,7 +50,8 @@ key/value pairs present in the message.
 theorem allows_iff :
     policy.Allows actor message ↔
       ∃ pattern ∈ policy.permission actor,
-        ∀ key value, (key, value) ∈ pattern → message.get key = some value :=
+        ∀ (key : String) (value : Value),
+          pattern[key]? = some value → message[key]? = some value :=
   Iff.rfl
 
 /-- **Default deny.** An actor who holds no patterns may call nothing. -/
@@ -84,9 +84,9 @@ theorem allows_congr
 Extra properties are ignored. An allowed call stays allowed when
 properties are added to the message.
 -/
-theorem Allows.of_extends (h : policy.Allows actor message) (hext : wider.Extends message) :
+theorem Allows.extend (h : policy.Allows actor message) (hmore : message.Within wider) :
     policy.Allows actor wider :=
-  Permission.Permits.of_extends h hext
+  Permission.Permits.extend h hmore
 
 end Policy
 

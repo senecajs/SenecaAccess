@@ -16,29 +16,29 @@ A permission: a finite set of patterns.
 It is written as a list, but only membership matters. Order and repetition
 have no effect (`Permission.permits_congr`).
 -/
-abbrev Permission (Key Value : Type) := List (Pattern Key Value)
+abbrev Permission (Value : Type) := List (Pattern Value)
 
 namespace Permission
 
-variable {Key Value : Type}
+variable {Value : Type}
 
 /-- A permission permits a message when at least one of its patterns
 matches the message. -/
-def Permits (permission : Permission Key Value) (message : Message Key Value) : Prop :=
+def Permits (permission : Permission Value) (message : Message Value) : Prop :=
   ∃ pattern ∈ permission, pattern.Matches message
 
 /-- Whether a permission permits a message can be computed: try each
 pattern in turn. -/
-instance [DecidableEq Value] (permission : Permission Key Value) (message : Message Key Value) :
+instance [DecidableEq Value] (permission : Permission Value) (message : Message Value) :
     Decidable (permission.Permits message) :=
   inferInstanceAs (Decidable (∃ pattern ∈ permission, Pattern.Matches pattern message))
 
-variable {permission larger first second : Permission Key Value}
-variable {pattern general specific : Pattern Key Value}
-variable {message wider : Message Key Value}
+variable {permission larger first second : Permission Value}
+variable {pattern general specific : Pattern Value}
+variable {message wider : Message Value}
 
 /-- **Default deny.** The empty permission permits nothing. -/
-theorem not_permits_nil : ¬ Permits ([] : Permission Key Value) message :=
+theorem not_permits_nil : ¬ Permits ([] : Permission Value) message :=
   fun ⟨_, hmem, _⟩ => nomatch hmem
 
 /--
@@ -98,27 +98,29 @@ theorem permits_congr (hsame : ∀ pattern, pattern ∈ permission ↔ pattern �
    fun h => h.mono fun _ hmem => (hsame _).mpr hmem⟩
 
 /-- A permission that contains the empty pattern permits every message. -/
-theorem permits_of_nil_mem (hmem : [] ∈ permission) : permission.Permits message :=
-  ⟨[], hmem, Pattern.matches_nil message⟩
+theorem permits_of_empty_mem (hmem : (∅ : Pattern Value) ∈ permission) :
+    permission.Permits message :=
+  ⟨∅, hmem, Pattern.matches_empty message⟩
 
 /--
 Extra properties are ignored. A permitted message stays permitted when
 properties are added to it.
 -/
-theorem Permits.of_extends (h : permission.Permits message) (hext : wider.Extends message) :
+theorem Permits.extend (h : permission.Permits message) (hmore : message.Within wider) :
     permission.Permits wider :=
   let ⟨candidate, hmem, hmatch⟩ := h
-  ⟨candidate, hmem, hmatch.of_extends hext⟩
+  ⟨candidate, hmem, hmatch.extend hmore⟩
 
 /--
 **Specificity does not matter.** Adding a pattern that asks for everything
 an existing pattern asks for, and possibly more, changes nothing: whatever
 the new pattern matches, the existing one already matched.
 -/
-theorem permits_cons_of_subset (hmem : general ∈ permission) (hsub : general ⊆ specific) :
+theorem permits_cons_of_within (hmem : general ∈ permission)
+    (hless : Message.Within general specific) :
     Permits (specific :: permission) message ↔ permission.Permits message :=
   ⟨fun h =>
-     (permits_cons.mp h).elim (fun hmatch => ⟨general, hmem, hmatch.of_subset hsub⟩) id,
+     (permits_cons.mp h).elim (fun hmatch => ⟨general, hmem, hmatch.weaken hless⟩) id,
    fun h => permits_cons.mpr (.inr h)⟩
 
 end Permission

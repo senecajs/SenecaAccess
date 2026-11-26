@@ -3,18 +3,45 @@ import SenecaAccess.Policy
 /-!
 # Worked examples
 
-The rule applied to concrete messages, with keys, values and actor names
-all strings.
+The rule applied to concrete messages, with values and actor names both
+strings.
 
-Each `#guard` line is evaluated when the spec is built, and the build
-fails if any of them is false.
+Each example is a proof by `decide`. Lean runs the rule's decision
+procedure in its kernel and accepts the example only if the answer comes
+out as stated, so the build fails if any example is false.
 -/
 
 namespace SenecaAccess.Examples
 
 /-- A message, written as its properties. -/
-def msg (properties : List (String × String)) : Message String String :=
+def msg (properties : List (String × String)) : Message String :=
   Message.ofList properties
+
+/-- A pattern, written as the properties it asks for. -/
+def pat (properties : List (String × String)) : Pattern String :=
+  Message.ofList properties
+
+/-!
+## Messages are maps
+-/
+
+-- A key has one value. Written twice, the last one counts, as in JavaScript.
+example : (msg [("cmd", "load"), ("cmd", "save")])["cmd"]? = some "save" := by decide
+
+-- A key that is not there has no value.
+example : (msg [("cmd", "load")])["name"]? = none := by decide
+
+-- The order in which properties are written makes no difference: this is one message.
+example : msg [("sys", "entity"), ("cmd", "load")] = msg [("cmd", "load"), ("sys", "entity")] := by
+  decide
+
+-- Keys are kept in alphabetical order, the order patrun checks them in.
+example : (msg [("sys", "entity"), ("name", "note"), ("cmd", "load")]).keys
+    = ["cmd", "name", "sys"] := by decide
+
+/-!
+## The access rule
+-/
 
 /--
 A small policy.
@@ -23,44 +50,50 @@ A small policy.
 * `root` holds the empty pattern, and so may call anything.
 * Nobody else holds any pattern.
 -/
-def policy : Policy String String String where
+def policy : Policy String String where
   permission
     | "alice" =>
-      [ [("sys", "entity"), ("cmd", "load")],
-        [("sys", "entity"), ("cmd", "save"), ("name", "note")] ]
-    | "root" => [ [] ]
+      [ pat [("sys", "entity"), ("cmd", "load")],
+        pat [("sys", "entity"), ("cmd", "save"), ("name", "note")] ]
+    | "root" => [ pat [] ]
     | _ => []
 
 -- A message with exactly the properties of a pattern alice holds is allowed.
-#guard policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "load")])
+example : policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "load")]) := by decide
 
 -- Properties beyond those the pattern names are ignored.
-#guard policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "load"), ("name", "order")])
+example : policy.Allows "alice"
+    (msg [("sys", "entity"), ("cmd", "load"), ("name", "order")]) := by decide
 
 -- The order in which a message lists its properties makes no difference.
-#guard policy.Allows "alice" (msg [("name", "order"), ("cmd", "load"), ("sys", "entity")])
+example : policy.Allows "alice"
+    (msg [("name", "order"), ("cmd", "load"), ("sys", "entity")]) := by decide
 
 -- Alice's second pattern asks for `name` to be `note`, and nothing else will do.
-#guard policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "save"), ("name", "note")])
-#guard ¬ policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "save"), ("name", "order")])
-#guard ¬ policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "save")])
+example : policy.Allows "alice"
+    (msg [("sys", "entity"), ("cmd", "save"), ("name", "note")]) := by decide
+example : ¬ policy.Allows "alice"
+    (msg [("sys", "entity"), ("cmd", "save"), ("name", "order")]) := by decide
+example : ¬ policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "save")]) := by decide
 
 -- No pattern alice holds is met by a `remove`.
-#guard ¬ policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "remove"), ("name", "note")])
+example : ¬ policy.Allows "alice"
+    (msg [("sys", "entity"), ("cmd", "remove"), ("name", "note")]) := by decide
 
 -- Values are compared exactly.
-#guard ¬ policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "LOAD")])
+example : ¬ policy.Allows "alice" (msg [("sys", "entity"), ("cmd", "LOAD")]) := by decide
 
 -- A message that lacks a property every pattern asks for is denied.
-#guard ¬ policy.Allows "alice" (msg [("sys", "entity")])
-#guard ¬ policy.Allows "alice" (msg [])
+example : ¬ policy.Allows "alice" (msg [("sys", "entity")]) := by decide
+example : ¬ policy.Allows "alice" (msg []) := by decide
 
 -- The empty pattern matches every message, the empty message included.
-#guard policy.Allows "root" (msg [("sys", "entity"), ("cmd", "remove"), ("name", "note")])
-#guard policy.Allows "root" (msg [])
+example : policy.Allows "root"
+    (msg [("sys", "entity"), ("cmd", "remove"), ("name", "note")]) := by decide
+example : policy.Allows "root" (msg []) := by decide
 
 -- Default deny: the policy gives mallory no patterns.
-#guard ¬ policy.Allows "mallory" (msg [("sys", "entity"), ("cmd", "load")])
-#guard ¬ policy.Allows "mallory" (msg [])
+example : ¬ policy.Allows "mallory" (msg [("sys", "entity"), ("cmd", "load")]) := by decide
+example : ¬ policy.Allows "mallory" (msg []) := by decide
 
 end SenecaAccess.Examples
