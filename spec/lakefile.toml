@@ -1,0 +1,10 @@
+name = "SenecaAccess"
+version = "0.1.0"
+defaultTargets = ["SenecaAccess"]
+
+# An undeclared name in a statement is an error, never a silently added variable.
+[leanOptions]
+autoImplicit = false
+
+[[lean_lib]]
+name = "SenecaAccess"
